@@ -8,14 +8,11 @@ import yaml
 _ = os.system
 
 def _start_db (db_data):
-    print 'start', db_data
-    # todo: 
+    # todo: handle other versions of the db
     _ ('/Users/john/Desktop/zalando/dbs/postgres/9.0.6/bin/pg_ctl start -D %s' % db_data['path'])
 
 def _stop_db (db_data):
-    print 'stop', db_data
     _ ('/Users/john/Desktop/zalando/dbs/postgres/9.0.6/bin/pg_ctl stop -D %s' % db_data['path'])
-
 
 CONF = {}
 COMMANDS = {'start': _start_db, 'stop': _stop_db}
@@ -42,7 +39,6 @@ def main():
     params = parse_params ()
     load_db_confs (params.config)
 
-    print params
     cmd = params.command [0]
     if cmd not in COMMANDS.keys():
         print 'command not found', cmd
