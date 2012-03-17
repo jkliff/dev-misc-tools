@@ -17,8 +17,12 @@ def _start_db (db_data):
 def _stop_db (db_data):
     _ ('%s/bin/pg_ctl stop -D %s' % (db_data ['pg_path'], db_data['path']))
 
+def _status_db (db_data):
+    _ ('%s/bin/pg_ctl status -D %s' % (db_data ['pg_path'], db_data['path']))
+
+
 CONF = {}
-COMMANDS = {'start': _start_db, 'stop': _stop_db}
+COMMANDS = {'start': _start_db, 'stop': _stop_db, 'status': _status_db}
 
 def load_db_confs (conf_path = None):
     global CONF
