@@ -1,0 +1,8 @@
+nodes: 
+    version: 9.0 
+    path: 
+
+zalando-test:
+    version: 9.0
+    path: ~/Desktop/zalando/dbs/zalando-test
+

@@ -1,0 +1,59 @@
+#!/usr/bin/python
+
+import os
+import sys
+import argparse
+import yaml
+
+_ = os.system
+
+def _start_db (db_data):
+    print 'start', db_data
+    # todo: 
+    _ ('/Users/john/Desktop/zalando/dbs/postgres/9.0.6/bin/pg_ctl start -D %s' % db_data['path'])
+
+def _stop_db (db_data):
+    print 'stop', db_data
+    _ ('/Users/john/Desktop/zalando/dbs/postgres/9.0.6/bin/pg_ctl stop -D %s' % db_data['path'])
+
+
+CONF = {}
+COMMANDS = {'start': _start_db, 'stop': _stop_db}
+
+def load_db_confs (conf_path = None):
+    global CONF
+
+    if not os.path.exists (conf_path):
+        print 'No configuration could be read. Please specify the path with the -c option.'
+        exit (-1)
+
+    with (open (conf_path)) as f:
+        CONF = yaml.load (f.read())
+
+def parse_params ():
+    parser = argparse.ArgumentParser (description = 'database instance manager')
+    parser.add_argument ('-c', '--config', default = '~/.db_ctl.conf', help = 'configuration file')
+    parser.add_argument ('command', type = str, nargs = 1)
+    parser.add_argument ('database', type = str, nargs = 1)
+
+    return parser.parse_args()
+
+def main():
+    params = parse_params ()
+    load_db_confs (params.config)
+
+    print params
+    cmd = params.command [0]
+    if cmd not in COMMANDS.keys():
+        print 'command not found', cmd
+        exit (-2)
+
+    db = params.database[0]
+    if db not in CONF.keys():
+        print 'db conf not found for %s.' % db
+        exit (-3)
+
+    COMMANDS [cmd] (CONF[db])
+
+if __name__ == '__main__':
+    main()
