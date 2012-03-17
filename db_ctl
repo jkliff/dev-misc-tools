@@ -20,9 +20,14 @@ def _stop_db (db_data):
 def _status_db (db_data):
     _ ('%s/bin/pg_ctl status -D %s' % (db_data ['pg_path'], db_data['path']))
 
+def _list_status_db (nouse):
+    global CONF
+    for db in CONF.keys():
+        print db
+        _status_db (CONF[db])
 
 CONF = {}
-COMMANDS = {'start': _start_db, 'stop': _stop_db, 'status': _status_db}
+COMMANDS = {'start': _start_db, 'stop': _stop_db, 'status': _status_db, 'lstatus': _list_status_db}
 
 def load_db_confs (conf_path = None):
     global CONF
@@ -38,7 +43,7 @@ def parse_params ():
     parser = argparse.ArgumentParser (description = 'database instance manager')
     parser.add_argument ('-c', '--config', default = '~/.db_ctl.conf', help = 'configuration file')
     parser.add_argument ('command', type = str, nargs = 1)
-    parser.add_argument ('database', type = str, nargs = 1)
+    parser.add_argument ('database', type = str, nargs = '?')
 
     return parser.parse_args()
 
@@ -51,12 +56,24 @@ def main():
         print 'command not found', cmd
         exit (-2)
 
-    db = params.database[0]
-    if db not in CONF.keys():
-        print 'db conf not found for %s.' % db
-        exit (-3)
+    db = None
+    if params.database:
+        db = params.database[0]
 
-    COMMANDS [cmd] (CONF[db])
+    if cmd in ['start', 'stop', 'status']:
+        if db is None:
+            print 'too few params'
+            exit (-3)
+
+        if db not in CONF.keys():
+            print 'db conf not found for %s.' % db
+            exit (-4)
+
+    p = None
+    if db is not None:
+        p = CONF [db]
+
+    COMMANDS [cmd] (p)
 
 if __name__ == '__main__':
     main()
