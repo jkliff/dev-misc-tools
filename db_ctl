@@ -9,10 +9,13 @@ _ = os.system
 
 def _start_db (db_data):
     # todo: handle other versions of the db
-    _ ('/Users/john/Desktop/zalando/dbs/postgres/9.0.6/bin/pg_ctl start -D %s' % db_data['path'])
+    # todo: handle mac startup: 
+    #       sudo sysctl -w kern.sysv.shmmax=1073741824
+    #       sudo sysctl -w kern.sysv.shmall=1073741824
+    _ ('%s/bin/pg_ctl start -D %s' % (db_data ['pg_path'], db_data['path']))
 
 def _stop_db (db_data):
-    _ ('/Users/john/Desktop/zalando/dbs/postgres/9.0.6/bin/pg_ctl stop -D %s' % db_data['path'])
+    _ ('%s/bin/pg_ctl stop -D %s' % (db_data ['pg_path'], db_data['path']))
 
 CONF = {}
 COMMANDS = {'start': _start_db, 'stop': _stop_db}
