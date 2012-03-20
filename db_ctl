@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# sudo easy_install pyyaml
 
 import os
 import sys
