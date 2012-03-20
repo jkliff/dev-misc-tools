@@ -11,6 +11,7 @@ zalando-test:
     version: 9.0
     path: /path/to/other/db
     pg_path: /path/to/other/root/of/pgdir
+    run_as: postgres
 
 pg_path should point to the install dir o postgres, not its bin directory.
 
@@ -20,20 +21,26 @@ import sys
 import argparse
 import yaml
 
-_ = os.system
+
+def _ (cmd, run_as = None):
+
+    if run_as:
+        cmd = 'sudo su - %s -c "%s"' % (run_as, cmd)
+
+    os.system (cmd)
 
 def _start_db (db_data):
     # todo: handle other versions of the db
     # todo: handle mac startup: 
     #       sudo sysctl -w kern.sysv.shmmax=1073741824
     #       sudo sysctl -w kern.sysv.shmall=1073741824
-    _ ('%s/bin/pg_ctl start -D %s' % (db_data ['pg_path'], db_data['path']))
+    _ ('%s/bin/pg_ctl start -D %s' % (db_data ['pg_path'], db_data['path']), db_data['run_as'])
 
 def _stop_db (db_data):
-    _ ('%s/bin/pg_ctl stop -D %s' % (db_data ['pg_path'], db_data['path']))
+    _ ('%s/bin/pg_ctl stop -D %s' % (db_data ['pg_path'], db_data['path']), db_data['run_as'])
 
 def _status_db (db_data):
-    _ ('%s/bin/pg_ctl status -D %s' % (db_data ['pg_path'], db_data['path']))
+    _ ('%s/bin/pg_ctl status -D %s' % (db_data ['pg_path'], db_data['path']), db_data['run_as'])
 
 def _list_status_db (nouse):
     global CONF
@@ -54,6 +61,10 @@ def load_db_confs (conf_path = None):
     with (open (conf_path)) as f:
         CONF = yaml.load (f.read())
 
+    for k in CONF.keys():
+        if 'run_as' not in CONF[k]:
+            CONF[k]['run_as'] = None
+
 def parse_params ():
     parser = argparse.ArgumentParser (description = 'database instance manager')
     parser.add_argument ('-c', '--config', default = '~/.db_ctl.conf', help = 'configuration file')
@@ -73,7 +84,7 @@ def main():
 
     db = None
     if params.database:
-        db = params.database[0]
+        db = params.database
 
     if cmd in ['start', 'stop', 'status']:
         if db is None:
