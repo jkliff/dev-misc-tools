@@ -1,6 +1,20 @@
 #!/usr/bin/python
 # sudo easy_install pyyaml
+"""Sample config: 
 
+nodes: 
+    version: 9.0 
+    path: /path/to/db
+    pg_path: /path/to/root/of/pg/dir
+
+zalando-test:
+    version: 9.0
+    path: /path/to/other/db
+    pg_path: /path/to/other/root/of/pgdir
+
+pg_path should point to the install dir o postgres, not its bin directory.
+
+"""
 import os
 import sys
 import argparse
