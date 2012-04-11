@@ -54,6 +54,8 @@ COMMANDS = {'start': _start_db, 'stop': _stop_db, 'status': _status_db, 'lstatus
 def load_db_confs (conf_path = None):
     global CONF
 
+    conf_path = os.path.expanduser (conf_path)
+
     if not os.path.exists (conf_path):
         print 'No configuration could be read. Please specify the path with the -c option.'
         exit (-1)
