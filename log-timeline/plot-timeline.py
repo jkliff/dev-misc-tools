@@ -47,7 +47,7 @@ TIME_SCALE_WIDTH = 20
 SYSCALL_MARKER_WIDTH = 20
 LOG_TEXT_XPOS = 300
 LOG_MARKER_WIDTH = 20
-BACKGROUND_COLOR = (0, 0, 0)
+BACKGROUND_COLOR = (80, 80, 80)
 
 # list of strings to ignore in the plot
 ignore_strings = [
@@ -78,6 +78,9 @@ def string_has_substrings (string, substrings):
 
 
 timestamp_mark = re.compile ('^(\d+\.\d+) (.*)$')
+read_mark = re.compile ('^\d+\.\d+ read\(')
+open_close_mark = re.compile ('^\d+\.\d+ (:?open|close)\(')
+
 
 success_result = "0"
 
@@ -157,10 +160,15 @@ class SyscallParser:
 
         m = timestamp_mark.search (str)
         if m:
-            print m.group (1)
+            #print m.group (1)
             timestamp = float (m.group (1))
             a = AccessMark (timestamp, m.group (2))
-            a.colors = colors = 0.75, 0.33, 0.33
+            color_idx = 0
+            if read_mark.search (str):
+                color_idx = 3
+            elif open_close_mark.search (str):
+                color_idx = 4
+            a.colors = colors = palette [color_idx]
             self.syscalls.append (a)
 
         return
