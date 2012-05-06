@@ -19,6 +19,7 @@
 #
 # Authors: Federico Mena-Quintero <federico@gnu.org>
 #          Johan Dahlin <johan@gnome.org>
+#          and others.
 #
 # Forked on April 26th, 2012.
 # Since then this venerable tool by the great Federico Mena-Quintero has been
@@ -27,13 +28,14 @@
 #
 
 import math
-import optparse
+import argparse
 import os
 import re
 import sys
 
 import cairo
 
+import time
 from datetime import datetime
 
 ### CUSTOMIZATION BEGINS HERE
@@ -76,8 +78,16 @@ def string_has_substrings (string, substrings):
 
     return False
 
-
-timestamp_mark = re.compile ('^(\d+\.\d+) (.*)$')
+"""
+Some common regexps:
+* strace -ttt -f:
+    -F 'UNIX_TS' -t '^(\d+\.\d+) (.*)$'
+* typical log4j:
+    -F '%Y-%m-%d %H:%M:%S,%f' -t '^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) (.{100}).*$'
+"""
+#timestamp_mark = re.compile ('^(\d+\.\d+) (.*)$')
+timestamp_mark = None
+timestamp_format = None
 read_mark = re.compile ('^\d+\.\d+ read\(')
 open_close_mark = re.compile ('^\d+\.\d+ (:?open|close)\(')
 
@@ -152,7 +162,7 @@ class SyscallParser:
 
         return (None, None, None)
 
-    def add_line (self, str):
+    def add_line (self, str, debug_regexp=False):
         """here we: 
 - search for patterns to mark
 - add then to self.syscalls with .append(asdf)
@@ -160,8 +170,16 @@ class SyscallParser:
 
         m = timestamp_mark.search (str)
         if m:
-            #print m.group (1)
-            timestamp = float (m.group (1))
+            if timestamp_format == 'UNIX_TS':
+                timestamp = float (m.group (1))
+            else:
+                ts = datetime.strptime (m.group (1), timestamp_format)
+                timestamp = float (time.mktime (ts.timetuple()) + ts.microsecond / float (1000000))
+
+            if debug_regexp:
+                print timestamp
+                return
+
             a = AccessMark (timestamp, m.group (2))
             color_idx = 0
             if read_mark.search (str):
@@ -173,14 +191,14 @@ class SyscallParser:
 
         return
 
-def parse_strace(filename):
+def parse_strace(filename, debug_regexp=False):
     parser = SyscallParser ()
 
     for line in file(filename, "r"):
         if line == "":
             break
 
-        parser.add_line (line)
+        parser.add_line (line, debug_regexp=debug_regexp)
 
     return parser.syscalls
 
@@ -221,7 +239,7 @@ def plot_time_scale(surface, ctx, metrics):
 
     ctx.set_source_rgb(0.5, 0.5, 0.5)
     ctx.set_line_width(1.0)
-    print num_seconds
+
     for i in range(num_seconds):
         ypos = i * PIXELS_PER_SECOND
 
@@ -236,11 +254,11 @@ def plot_syscall(surface, ctx, syscall):
     ctx.set_source_rgb(*syscall.colors)
 
     # Line
-    print (TIME_SCALE_WIDTH, syscall.timestamp_ypos)
-    print (TIME_SCALE_WIDTH + SYSCALL_MARKER_WIDTH, syscall.timestamp_ypos)
-    print (LOG_TEXT_XPOS - LOG_MARKER_WIDTH, syscall.log_ypos - FONT_SIZE / 2 + 0.5)
-    print (LOG_TEXT_XPOS, syscall.log_ypos - FONT_SIZE / 2 + 0.5)
-    print '-'
+    #print (TIME_SCALE_WIDTH, syscall.timestamp_ypos)
+    #print (TIME_SCALE_WIDTH + SYSCALL_MARKER_WIDTH, syscall.timestamp_ypos)
+    #print (LOG_TEXT_XPOS - LOG_MARKER_WIDTH, syscall.log_ypos - FONT_SIZE / 2 + 0.5)
+    #print (LOG_TEXT_XPOS, syscall.log_ypos - FONT_SIZE / 2 + 0.5)
+    #print '-'
 
     ctx.move_to(TIME_SCALE_WIDTH, syscall.timestamp_ypos)
     ctx.line_to(TIME_SCALE_WIDTH + SYSCALL_MARKER_WIDTH, syscall.timestamp_ypos)
@@ -283,25 +301,47 @@ def plot_syscalls_to_surface(syscalls, metrics):
     return surface
 
 def main(args):
-    option_parser = optparse.OptionParser(
-        usage="usage: %prog -o output.png <strace.txt>")
-    option_parser.add_option("-o",
+    argument_parser = argparse.ArgumentParser()
+
+    argument_parser.add_argument("-o",
                              "--output", dest="output",
                              metavar="FILE",
                              help="Name of output file (output is a PNG file)")
+    argument_parser.add_argument ('-t', '--timestamp-regexp', dest='ts_regexp',
+                            help='Regular expression to recognize timestamp on lines')
+    argument_parser.add_argument ('-F', '--timestamp-format', dest='ts_format',
+                            required=True,
+                            help='Format for parse of date (into timestamp).')
+    argument_parser.add_argument ('--debug-ts-regexp', dest='debug_ts_regexp',
+                            action='store_true',
+                            help="Don't generate image, just dump the recognized timestamps (for testing the regexp).")
+    argument_parser.add_argument ('input', type=str)
 
-    options, args = option_parser.parse_args()
+    arguments = argument_parser.parse_args()
+    print arguments
 
-    if not options.output:
+    if not arguments.output:
         print 'Please specify an output filename with "-o file.png" or "--output=file.png".'
+        argument_parser.print_help()
         return 1
 
-    if len(args) != 1:
-        print 'Please specify only one input filename, which is an strace log taken with "strace -ttt -f"'
-        return 1
+    if not arguments.ts_regexp:
+        print 'Please specify a regular expression to recognize a timestamp'
+        argument_parser.print_help()
 
-    in_filename = args[0]
-    out_filename = options.output
+        return 1
+    else:
+        print 'Using regexp', arguments.ts_regexp
+        global timestamp_mark, timestamp_format
+        timestamp_mark = re.compile (arguments.ts_regexp)
+        timestamp_format = arguments.ts_format
+
+    in_filename = arguments.input
+    out_filename = arguments.output
+
+    if arguments.debug_ts_regexp:
+        parse_strace (in_filename, debug_regexp=True)
+        return 0
 
     syscalls = []
     for syscall in parse_strace(in_filename):
