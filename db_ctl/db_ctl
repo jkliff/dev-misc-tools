@@ -20,10 +20,30 @@ import os
 import sys
 import argparse
 import yaml
+import platform
+
+
+SYSTEM = platform.system()
+PLATFORM = {
+    'kill': {'Darwin': 'gkill'}
+}
+
+DB_COMMANDS = {
+    'pg': {
+        'start': lambda db_data: '%s/bin/pg_ctl start -D %s' % (db_data ['pg_path'], db_data['path']),
+        'stop': lambda db_data: '%s/bin/pg_ctl stop -D %s' % (db_data ['pg_path'], db_data['path']),
+        'status': lambda db_data: '%s/bin/pg_ctl status -D %s' % (db_data ['pg_path'], db_data['path'])
+    },
+    'mongo': {
+        'start': lambda db_data: '%s --dbpath %s --master --pidfilepath %s --logpath %s --logappend &' % (db_data['mongo_path'], db_data ['path'], db_data ['pidfile'], db_data['logfile']),
+        'stop': lambda db_data: '%s -15 $(cat %s)' % (PLATFORM['kill'][SYSTEM], db_data['pidfile'])
+    }
+}
+
 
 
 def _ (cmd, run_as = None):
-
+    print cmd
     if run_as:
         cmd = 'sudo su - %s -c "%s"' % (run_as, cmd)
 
@@ -31,16 +51,20 @@ def _ (cmd, run_as = None):
 
 def _start_db (db_data):
     # todo: handle other versions of the db
-    # todo: handle mac startup: 
+    # todo: handle mac startup:
     #       sudo sysctl -w kern.sysv.shmmax=1073741824
     #       sudo sysctl -w kern.sysv.shmall=1073741824
-    _ ('%s/bin/pg_ctl start -D %s' % (db_data ['pg_path'], db_data['path']), db_data['run_as'])
+    _ (DB_COMMANDS[db_data ['type']]['start'](db_data), db_data['run_as'])
 
 def _stop_db (db_data):
-    _ ('%s/bin/pg_ctl stop -D %s' % (db_data ['pg_path'], db_data['path']), db_data['run_as'])
+    _ (DB_COMMANDS[db_data ['type']]['stop'](db_data), db_data['run_as'])
 
 def _status_db (db_data):
-    _ ('%s/bin/pg_ctl status -D %s' % (db_data ['pg_path'], db_data['path']), db_data['run_as'])
+    if 'status' not in DB_COMMANDS[db_data['type']]:
+        print 'no info'
+        return
+
+    _ (DB_COMMANDS[db_data ['type']]['status'](db_data), db_data['run_as'])
 
 def _list_status_db (nouse):
     global CONF
@@ -49,7 +73,11 @@ def _list_status_db (nouse):
         _status_db (CONF[db])
 
 CONF = {}
-COMMANDS = {'start': _start_db, 'stop': _stop_db, 'status': _status_db, 'lstatus': _list_status_db}
+COMMANDS = {
+    'start': _start_db,
+    'stop': _stop_db,
+    'status': _status_db,
+    'lstatus': _list_status_db}
 
 def load_db_confs (conf_path = None):
     global CONF
