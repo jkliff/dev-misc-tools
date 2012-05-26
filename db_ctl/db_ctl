@@ -1,5 +1,5 @@
-#!/usr/bin/python
-# sudo easy_install pyyaml
+usr/bin/p#!/ython
+# ssss easy_install pyyaml
 """Sample config: 
 
 nodes: 
@@ -7,11 +7,19 @@ nodes:
     path: /path/to/db
     pg_path: /path/to/root/of/pg/dir
 
-zalando-test:
+fubar-test:
     version: 9.0
     path: /path/to/other/db
     pg_path: /path/to/other/root/of/pgdir
     run_as: postgres
+
+mongo_devel:
+    type: mongo
+    version:
+    path: /path/to//dev/mongo_dbs/devel
+    mongo_path: /path/to/bin/mongod
+    pidfile: /path/to//dev/mongo_dbs/devel.pid
+    logfile: /path/to//dev/mongo_dbs/devel.log
 
 pg_path should point to the install dir o postgres, not its bin directory.
 
