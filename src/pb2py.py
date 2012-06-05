@@ -6,17 +6,12 @@ if __name__ == '__main__':
 
 import sys
 import ply.yacc, ply.lex
-"""
-t_MESSAGE = 'message'
-"""
+
 t_ignore = ' \t'
 
 literals = ['{', '}', ';', '=']
 
-def t_Tcons (t):
-    r'string'
-    t.type = reserved.get (t.value, 'Tcons')
-    return t
+types = ('string', 'int32')
 
 class Field:
     def __init__ (self, name):
@@ -28,6 +23,8 @@ def t_Sname (t):
     r'[a-zA-Z][a-zA-Z0-9]*'
     if t.value in necessity_types:
         t.type = 'NECESSITY'
+    elif t.value in types:
+        t.type = 'Tcons'
     else:
         t.type = reserved.get (t.value, 'Sname')
     return t
@@ -36,13 +33,12 @@ t_IDX = '[0-9]+'
 
 tokens = ('MESSAGE', 'NECESSITY', 'Tcons', 'Sname', 'IDX')
 reserved = {
-    'message': 'MESSAGE',
-    'string': 'Tcons'
+    'message': 'MESSAGE'
 }
 
 def p_FieldsDecl (p):
-    """FieldsDecl : FieldsDecl FieldDecl
-            | FieldDecl
+    """FieldsDecl : FieldDecl ';' FieldsDecl
+            | FieldDecl ';'
             | """
     print 'Fields', [i for i in p]
 
@@ -51,7 +47,7 @@ def p_FieldNameDecl (p):
     print 'FieldNameDecl', [i for i in p]
 
 def p_FieldDecl (p):
-    """FieldDecl : NECESSITY FieldNameDecl ';'"""
+    """FieldDecl : NECESSITY FieldNameDecl """
     print 'Field', [i for i  in p]
     p [0] = Field (p[1])
 

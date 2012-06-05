@@ -9,7 +9,7 @@ class ProtoBufferParserTest (unittest.TestCase):
         pass
 
     def tearDown (self):
-        pass
+        print '-------------------------------------------------------'
 
 
     def testParseMessageError1 (self):
