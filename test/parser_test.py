@@ -11,8 +11,16 @@ class ProtoBufferParserTest (unittest.TestCase):
     def tearDown (self):
         pass
 
+
+    def testParseMessageError1 (self):
+        m = """message"""
+        parser = pb2py.PB2PyParser (m)
+        d = parser.toDict()
+        self.assertTrue (len (d) == 0)
+
+
     def testParseMessage (self):
-        m = """message {}"""
+        m = """message { }"""
         parser = pb2py.PB2PyParser (m)
         d = parser.toDict()
         self.assertTrue (len (d) == 0)
@@ -21,6 +29,25 @@ class ProtoBufferParserTest (unittest.TestCase):
         m = """message {
     required string foo = 1;
 }"""
+        parser = pb2py.PB2PyParser (m)
+        d = parser.toDict()
+        self.assertTrue (len (d) == 1)
+        self.assertTrue ('foo' in d.keys())
+
+    def testParseMessageWithTwoFields (self):
+        m = """message {
+    required string foo = 1;
+    required int32 bar = 2;
+}"""
+        parser = pb2py.PB2PyParser (m)
+        d = parser.toDict()
+        self.assertTrue (len (d) == 2)
+        self.assertTrue ('foo' in d.keys())
+        self.assertTrue ('bar' in d.keys())
+
+
+    def testParseMessageWithOneFieldOneLine (self):
+        m = """message { required string foo = 1; }"""
         parser = pb2py.PB2PyParser (m)
         d = parser.toDict()
         self.assertTrue (len (d) == 1)
