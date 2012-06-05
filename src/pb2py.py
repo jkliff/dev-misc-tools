@@ -7,6 +7,9 @@ if __name__ == '__main__':
 import sys
 import ply.yacc, ply.lex
 
+
+DEBUG_PARSING_RULES = False
+
 t_ignore = ' \t'
 
 literals = ['{', '}', ';', '=']
@@ -40,22 +43,32 @@ def p_FieldsDecl (p):
     """FieldsDecl : FieldDecl ';' FieldsDecl
             | FieldDecl ';'
             | """
-    print 'Fields', [i for i in p]
+    print 'Fields', [i for i in p], len (p)
+    if len (p) == 4:
+        p[0] = p[3]
+        p[0].insert (0, p[1])
+    elif len (p) == 3:
+        p[0] = [p[1]]
+    else:
+        print 'UNDEFINED STATE!', 'Fields', [i for i in p], len (p)
+
 
 def p_FieldNameDecl (p):
     """FieldNameDecl : Tcons Sname '=' IDX"""
     print 'FieldNameDecl', [i for i in p]
+    p[0] = p[2]
 
 def p_FieldDecl (p):
     """FieldDecl : NECESSITY FieldNameDecl """
     print 'Field', [i for i  in p]
-    p [0] = Field (p[1])
+    p [0] = p[2]
 
 def p_MessageDecl (p):
     """MessageDecl : MESSAGE '{' FieldsDecl '}'"""
     print 'Message', [i for i in p]
-    if p[2] is None:
+    if p[3] is None:
         return
+    p[0] = p[3]
 
 def t_newline(t):
     r'\n+'
@@ -72,8 +85,9 @@ def parse (body):
     lexer = ply.lex.lex ()
     yacc = ply.yacc.yacc ()
 
-    print yacc.parse (body, debug=True)
-    print 'parsed'
+    r = yacc.parse (body, debug=DEBUG_PARSING_RULES)
+    print r
+    return r
 
 class PB2PyParser:
 
@@ -83,12 +97,11 @@ class PB2PyParser:
         self.__protBufDecl = protBufDecl
         self.__buildAST ()
 
-
     def __buildAST (self):
-        parse(self.__protBufDecl)
+        self.__ast = parse(self.__protBufDecl)
 
     def toDict (self):
-        pass
+        return self.__ast
 
 
 class Foo:

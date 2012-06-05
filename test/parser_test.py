@@ -32,7 +32,7 @@ class ProtoBufferParserTest (unittest.TestCase):
         parser = pb2py.PB2PyParser (m)
         d = parser.toDict()
         self.assertTrue (len (d) == 1)
-        self.assertTrue ('foo' in d.keys())
+        self.assertTrue ('foo' in d)
 
     def testParseMessageWithTwoFields (self):
         m = """message {
@@ -42,8 +42,22 @@ class ProtoBufferParserTest (unittest.TestCase):
         parser = pb2py.PB2PyParser (m)
         d = parser.toDict()
         self.assertTrue (len (d) == 2)
-        self.assertTrue ('foo' in d.keys())
-        self.assertTrue ('bar' in d.keys())
+        self.assertTrue ('foo' in d)
+        self.assertTrue ('bar' in d)
+
+    def testParseMessageWithManyFields (self):
+        m = """message {
+    required string foo = 1;
+    required int32 bar = 2;
+    required int32 yui = 3;
+
+}"""
+        parser = pb2py.PB2PyParser (m)
+        d = parser.toDict()
+        self.assertTrue (len (d) == 3)
+        self.assertTrue ('foo' in d)
+        self.assertTrue ('bar' in d)
+        self.assertTrue ('yui' in d)
 
 
     def testParseMessageWithOneFieldOneLine (self):
@@ -51,5 +65,5 @@ class ProtoBufferParserTest (unittest.TestCase):
         parser = pb2py.PB2PyParser (m)
         d = parser.toDict()
         self.assertTrue (len (d) == 1)
-        self.assertTrue ('foo' in d.keys())
+        self.assertTrue ('foo' in d)
 
