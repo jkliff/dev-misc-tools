@@ -9,11 +9,9 @@ import ply.yacc, ply.lex
 """
 t_MESSAGE = 'message'
 """
-t_ignore = " \t\n"
-t_OPEN = "{"
-t_CLOSE = "}"
-t_NECESSITY = r'(required|optional)'
-t_EQUALS = '='
+t_ignore = ' \t'
+
+literals = ['{', '}', ';', '=']
 
 def t_Tcons (t):
     r'string'
@@ -24,35 +22,48 @@ class Field:
     def __init__ (self, name):
         self.name = name
 
+necessity_types = ('required', 'optional')
+
 def t_Sname (t):
     r'[a-zA-Z][a-zA-Z0-9]*'
-    t.type = reserved.get (t.value, 'Sname')
+    if t.value in necessity_types:
+        t.type = 'NECESSITY'
+    else:
+        t.type = reserved.get (t.value, 'Sname')
     return t
 
 t_IDX = '[0-9]+'
 
-tokens = ('MESSAGE', 'OPEN', 'CLOSE', 'NECESSITY', 'EQUALS', 'Tcons', 'Sname', 'IDX')
+tokens = ('MESSAGE', 'NECESSITY', 'Tcons', 'Sname', 'IDX')
 reserved = {
     'message': 'MESSAGE',
     'string': 'Tcons'
 }
 
 def p_FieldsDecl (p):
-    """FieldsDecl : FieldDecl FieldsDecl
+    """FieldsDecl : FieldsDecl FieldDecl
             | FieldDecl
             | """
     print 'Fields', [i for i in p]
 
+def p_FieldNameDecl (p):
+    """FieldNameDecl : Tcons Sname '=' IDX"""
+    print 'FieldNameDecl', [i for i in p]
+
 def p_FieldDecl (p):
-    """FieldDecl : NECESSITY Tcons Sname EQUALS IDX ';'"""
+    """FieldDecl : NECESSITY FieldNameDecl ';'"""
     print 'Field', [i for i  in p]
     p [0] = Field (p[1])
 
 def p_MessageDecl (p):
-    """MessageDecl : MESSAGE OPEN FieldsDecl CLOSE"""
+    """MessageDecl : MESSAGE '{' FieldsDecl '}'"""
     print 'Message', [i for i in p]
     if p[2] is None:
         return
+
+def t_newline(t):
+    r'\n+'
+    t.lexer.lineno += len(t.value)
 
 def t_error (t):
     print 'error', t
@@ -65,7 +76,7 @@ def parse (body):
     lexer = ply.lex.lex ()
     yacc = ply.yacc.yacc ()
 
-    print yacc.parse (body)
+    print yacc.parse (body, debug=True)
     print 'parsed'
 
 class PB2PyParser:
