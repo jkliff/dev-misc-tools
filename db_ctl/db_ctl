@@ -36,19 +36,6 @@ PLATFORM = {
     'kill': {'Darwin': 'gkill'}
 }
 
-DB_COMMANDS = {
-    'pg': {
-        'start': lambda db_data: '%s/bin/pg_ctl start -D %s' % (db_data ['pg_path'], db_data['path']),
-        'stop': lambda db_data: '%s/bin/pg_ctl stop -D %s' % (db_data ['pg_path'], db_data['path']),
-        'status': lambda db_data: '%s/bin/pg_ctl status -D %s' % (db_data ['pg_path'], db_data['path'])
-    },
-    'mongo': {
-        'start': lambda db_data: '%s --dbpath %s --master --pidfilepath %s --logpath %s --logappend &' % (db_data['mongo_path'], db_data ['path'], db_data ['pidfile'], db_data['logfile']),
-        'stop': lambda db_data: '%s -15 $(cat %s)' % (PLATFORM['kill'][SYSTEM], db_data['pidfile'])
-    }
-}
-
-
 
 def _ (cmd, run_as = None):
     if run_as:
@@ -56,26 +43,85 @@ def _ (cmd, run_as = None):
 
     os.system (cmd)
 
+class DBCommand:
+    def status(self, db_data, run_as=None):
+        pass
+    def start(self, db_data, run_as=None):
+        pass
+    def stop(self, db_data, run_as=None):
+        pass
+
+class PostgreSQLCommands (DBCommand):
+    def __setup_shmem (self):
+        _ ('sysctl -w kern.sysv.shmmax=1073741824', run_as='root')
+        _ ('sysctl -w kern.sysv.shmall=1073741824', run_as='root')
+
+    def status (self, db_data, run_as=None):
+
+        cmd = '%s/bin/pg_ctl status -D %s' % (db_data ['pg_path'], db_data['path'])
+
+        #if run_as is not None:
+        #    cmd = ('sudo %s ' % run_as) + cmd
+
+        _ (cmd)
+
+    def start (self, db_data, run_as=None):
+        self.__setup_shmem ()
+        _ ('%s/bin/pg_ctl start -D %s' % (db_data ['pg_path'], db_data['path']))
+
+    def stop (self, db_data, run_as=None):
+        _ ('%s/bin/pg_ctl stop -D %s' % (db_data ['pg_path'], db_data['path']))
+
+class MongoDBCommands (DBCommand):
+    def __get_pid (self, pidfile):
+
+        pid = None
+        if os.path.exists (pidfile):
+            with (open (pidfile)) as p:
+                pid = p.read().strip()
+            if pid == '':
+                pid = None
+
+        return pid
+
+    def status (self, db_data, run_as=None):
+        pid = self.__get_pid (db_data['pidfile'])
+        if pid is None:
+            print '%s does not seem to be running.' % db_data ['id']
+        else:
+            print '%s seems to be running on pid %s.' % (db_data ['id'], pid)
+
+    def start (self, db_data, run_as=None):
+        _ ('%s --dbpath %s --master --pidfilepath %s --logpath %s --logappend &' % (db_data['mongo_path'], db_data ['path'], db_data ['pidfile'], db_data['logfile']))
+
+    def stop (self, db_data, run_as=None):
+        pid = self.__get_pid (db_data['pidfile'])
+
+        if pid is None:
+            print '%s does not seem to be running.' % db_data ['id']
+            return
+
+        _ ('%s -15 %s' % (PLATFORM['kill'][SYSTEM], pid))
+
+
+DB_COMMANDS = {
+    'pg': PostgreSQLCommands(),
+    'mongo': MongoDBCommands()
+}
+
+
 def _start_db (db_data):
-    # todo: handle other versions of the db
-    # todo: handle mac startup:
-    #       sudo sysctl -w kern.sysv.shmmax=1073741824
-    #       sudo sysctl -w kern.sysv.shmall=1073741824
-    _ (DB_COMMANDS[db_data ['type']]['start'](db_data), db_data['run_as'])
+    DB_COMMANDS[db_data ['type']].start ((db_data), db_data['run_as'])
 
 def _stop_db (db_data):
-    _ (DB_COMMANDS[db_data ['type']]['stop'](db_data), db_data['run_as'])
+    DB_COMMANDS[db_data ['type']].stop ((db_data), db_data['run_as'])
 
 def _status_db (db_data):
-    if 'status' not in DB_COMMANDS[db_data['type']]:
-        print 'no info'
-        return
-
-    _ (DB_COMMANDS[db_data ['type']]['status'](db_data), db_data['run_as'])
+    DB_COMMANDS[db_data ['type']].status ((db_data), db_data['run_as'])
 
 def _list_status_db (nouse):
     global CONF
-    for db in CONF.keys():
+    for db in sorted(CONF.keys()):
         print db
         _status_db (CONF[db])
 
@@ -99,6 +145,7 @@ def load_db_confs (conf_path = None):
         CONF = yaml.load (f.read())
 
     for k in CONF.keys():
+        CONF[k]['id'] = k
         if 'run_as' not in CONF[k]:
             CONF[k]['run_as'] = None
 
