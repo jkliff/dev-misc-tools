@@ -1,0 +1,4 @@
+log-timeline:
+    generate svg
+protobuf2py:
+    support nested messages as complete support for different types
