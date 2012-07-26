@@ -53,8 +53,8 @@ class DBCommand:
 
 class PostgreSQLCommands (DBCommand):
     def __setup_shmem (self):
-        _ ('sysctl -w kern.sysv.shmmax=1073741824', run_as='root')
-        _ ('sysctl -w kern.sysv.shmall=1073741824', run_as='root')
+        _ ('/usr/sbin/sysctl -w kern.sysv.shmmax=1073741824', run_as='root')
+        _ ('/usr/sbin/sysctl -w kern.sysv.shmall=1073741824', run_as='root')
 
     def status (self, db_data, run_as=None):
 
